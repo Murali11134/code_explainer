@@ -2,14 +2,8 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Sequence
 
-from .analyzer import (
-    analyze_python_file,
-    collect_python_files,
-    render_flow_report,
-    render_flow_report_json,
-)
+from .analyzer import analyze_python_file, collect_python_files, render_flow_report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,18 +24,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional file path to save the generated report.",
     )
-    parser.add_argument(
-        "--format",
-        choices=["text", "json"],
-        default="text",
-        help="Output format for report (default: text)",
-    )
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> None:
+def main() -> None:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     root = args.path.resolve()
     files = [f for f in collect_python_files(root) if f.is_file()]
@@ -50,14 +38,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         report = f"No Python files found in {root}\n"
     else:
         file_flows = [analyze_python_file(file) for file in files]
-        report = render_flow_report_json(file_flows) if args.format == "json" else render_flow_report(file_flows)
+        report = render_flow_report(file_flows)
 
     if args.output:
         args.output.write_text(report, encoding="utf-8")
         print(f"Report written to {args.output}")
-        return
-
-    print(report, end="")
+    else:
+        print(report, end="")
 
 
 if __name__ == "__main__":
