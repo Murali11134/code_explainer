@@ -11,21 +11,13 @@ A project to analyze and explain code in a repository.
 
 ## Stage 1 delivered
 
-This stage includes a small CLI tool that performs static analysis for Python code and outputs:
+This stage now includes a CLI tool that performs static analysis for Python code and outputs:
 
 - files scanned
-- imports per file
 - top-level classes and functions
 - method/function arguments
 - called functions/methods
 - count of loops, conditionals, and return statements
-
-Ignored folders during scan:
-
-- `.venv`
-- `__pycache__`
-- `.git`
-- `node_modules`
 
 ## Usage
 
@@ -35,59 +27,15 @@ Run from the repository root:
 python -m code_explainer.cli .
 ```
 
-Select output format:
-
-```bash
-python -m code_explainer.cli . --format text
-python -m code_explainer.cli . --format json
-```
-
 Or install as a local CLI:
 
 ```bash
 pip install -e .
-code-explainer . --format json
+code-explainer .
 ```
 
 Save output to a file:
 
 ```bash
-python -m code_explainer.cli . --format json --output flow_report.json
-```
-
-## Sample output (text)
-
-```text
-# /repo/example.py
-  - imports: from pathlib import Path, os
-  - class Demo (line 8)
-    - def run(self, items) [line 9]
-      - calls: print
-      - loops: 1, conditionals: 0, returns: 0
-  - def top(a) [line 3]
-    - calls: Path, str
-    - loops: 0, conditionals: 1, returns: 2
-```
-
-## Sample output (json)
-
-```json
-[
-  {
-    "path": "/repo/example.py",
-    "imports": ["from pathlib import Path", "os"],
-    "classes": [],
-    "functions": [
-      {
-        "name": "top",
-        "lineno": 3,
-        "args": ["a"],
-        "calls": ["Path", "str"],
-        "loops": 0,
-        "conditionals": 1,
-        "returns": 2
-      }
-    ]
-  }
-]
+python -m code_explainer.cli . --output flow_report.txt
 ```

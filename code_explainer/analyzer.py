@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import ast
-import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
-
-IGNORED_DIRECTORIES = {".venv", "__pycache__", ".git", "node_modules"}
 
 
 @dataclass
@@ -30,7 +27,6 @@ class ClassFlow:
 @dataclass
 class FileFlow:
     path: Path
-    imports: list[str] = field(default_factory=list)
     classes: list[ClassFlow] = field(default_factory=list)
     functions: list[FunctionFlow] = field(default_factory=list)
 
@@ -81,27 +77,11 @@ def _collect_function_flow(node: ast.FunctionDef | ast.AsyncFunctionDef) -> Func
     )
 
 
-def _collect_imports(tree: ast.Module) -> list[str]:
-    imports: list[str] = []
-    for node in tree.body:
-        if isinstance(node, ast.Import):
-            for imported in node.names:
-                imports.append(imported.name)
-        elif isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            names = ", ".join(alias.name for alias in node.names)
-            if module:
-                imports.append(f"from {module} import {names}")
-            else:
-                imports.append(f"from . import {names}")
-    return sorted(set(imports))
-
-
 def analyze_python_file(path: Path) -> FileFlow:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source)
 
-    flow = FileFlow(path=path, imports=_collect_imports(tree))
+    flow = FileFlow(path=path)
 
     for node in tree.body:
         if isinstance(node, ast.ClassDef):
@@ -118,9 +98,7 @@ def analyze_python_file(path: Path) -> FileFlow:
 
 def collect_python_files(root: Path) -> Iterable[Path]:
     for file in sorted(root.rglob("*.py")):
-        if any(part in IGNORED_DIRECTORIES for part in file.parts):
-            continue
-        if file.name.startswith("."):
+        if file.parts and any(part.startswith(".") for part in file.parts):
             continue
         yield file
 
@@ -130,9 +108,6 @@ def render_flow_report(file_flows: list[FileFlow]) -> str:
 
     for file_flow in file_flows:
         lines.append(f"# {file_flow.path}")
-
-        imports = ", ".join(file_flow.imports) if file_flow.imports else "none"
-        lines.append(f"  - imports: {imports}")
 
         if not file_flow.classes and not file_flow.functions:
             lines.append("  - No top-level classes or functions found")
@@ -152,15 +127,6 @@ def render_flow_report(file_flows: list[FileFlow]) -> str:
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
-
-
-def render_flow_report_json(file_flows: list[FileFlow]) -> str:
-    payload = []
-    for file_flow in file_flows:
-        entry = asdict(file_flow)
-        entry["path"] = str(file_flow.path)
-        payload.append(entry)
-    return json.dumps(payload, indent=2) + "\n"
 
 
 def _render_function(function: FunctionFlow, prefix: str) -> list[str]:
